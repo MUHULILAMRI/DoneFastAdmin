@@ -1,0 +1,185 @@
+// DoneFast Admin - Order Distribution System
+// Prisma Schema for PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum PenjokiStatus {
+  ONLINE
+  OFFLINE
+  BUSY
+  AVAILABLE
+}
+
+enum OrderStatus {
+  WAITING
+  SEARCHING
+  ACCEPTED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum DistributionStatus {
+  SENT
+  REJECTED
+  ACCEPTED
+  TIMEOUT
+}
+
+enum UserRole {
+  ADMIN
+  PENJOKI
+  CUSTOMER
+}
+
+enum DistributionStrategy {
+  RANDOM
+  RATING
+  WORKLOAD
+  LEVEL
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          UserRole  @default(PENJOKI)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  penjoki       Penjoki?
+  orders        Order[]    @relation("CustomerOrders")
+
+  @@map("users")
+}
+
+model Penjoki {
+  id            String         @id @default(cuid())
+  userId        String         @unique @map("user_id")
+  name          String
+  email         String         @unique
+  phone         String?
+  avatar        String?
+  status        PenjokiStatus  @default(OFFLINE)
+  rating        Float          @default(5.0)
+  totalOrder    Int            @default(0) @map("total_order")
+  completedOrder Int           @default(0) @map("completed_order")
+  rejectedOrder Int            @default(0) @map("rejected_order")
+  level         Int            @default(1)
+  specialization String[]      @default([])
+  isActive      Boolean        @default(true) @map("is_active")
+  isSuspended   Boolean        @default(false) @map("is_suspended")
+  suspendReason String?        @map("suspend_reason")
+  suspendUntil  DateTime?      @map("suspend_until")
+  lastOnline    DateTime?      @map("last_online")
+  balance       Float          @default(0)
+  totalEarnings Float          @default(0) @map("total_earnings")
+  commissionRate Float         @default(0.8) @map("commission_rate")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders        Order[]
+  distributions OrderDistribution[]
+
+  @@map("penjokis")
+}
+
+model Order {
+  id            String       @id @default(cuid())
+  orderNumber   String       @unique @map("order_number")
+  customerName  String       @map("customer_name")
+  customerEmail String?      @map("customer_email")
+  customerPhone String?      @map("customer_phone")
+  customerId    String?      @map("customer_id")
+  serviceType   String       @map("service_type")
+  description   String       @db.Text
+  requirements  String?      @db.Text
+  deadline      DateTime?
+  price         Float
+  commission    Float        @default(0)
+  status        OrderStatus  @default(WAITING)
+  penjokiId     String?      @map("penjoki_id")
+  assignedAt    DateTime?    @map("assigned_at")
+  startedAt     DateTime?    @map("started_at")
+  completedAt   DateTime?    @map("completed_at")
+  notes         String?      @db.Text
+  attachments   String[]     @default([])
+  priority      Int          @default(0)
+  
+  distributionAttempts Int   @default(0) @map("distribution_attempts")
+  maxAttempts          Int   @default(10) @map("max_attempts")
+  responseTimeout      Int   @default(30) @map("response_timeout")
+  distributionStrategy DistributionStrategy @default(RATING) @map("distribution_strategy")
+  
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  penjoki       Penjoki?     @relation(fields: [penjokiId], references: [id])
+  customer      User?        @relation("CustomerOrders", fields: [customerId], references: [id])
+  distributions OrderDistribution[]
+
+  @@index([status])
+  @@index([penjokiId])
+  @@index([customerId])
+  @@map("orders")
+}
+
+model OrderDistribution {
+  id            String             @id @default(cuid())
+  orderId       String             @map("order_id")
+  penjokiId     String             @map("penjoki_id")
+  status        DistributionStatus @default(SENT)
+  sentAt        DateTime           @default(now()) @map("sent_at")
+  respondedAt   DateTime?          @map("responded_at")
+  reason        String?
+  responseTime  Int?               @map("response_time")
+  createdAt     DateTime           @default(now()) @map("created_at")
+
+  order         Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  penjoki       Penjoki            @relation(fields: [penjokiId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([penjokiId])
+  @@map("order_distributions")
+}
+
+model SystemConfig {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  value         String
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("system_configs")
+}
+
+model ActivityLog {
+  id            String   @id @default(cuid())
+  action        String
+  entity        String
+  entityId      String?  @map("entity_id")
+  details       String?  @db.Text
+  userId        String?  @map("user_id")
+  ipAddress     String?  @map("ip_address")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([entity, entityId])
+  @@map("activity_logs")
+}

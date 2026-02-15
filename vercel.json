@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npx prisma generate && next build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["sin1"],
+  "env": {
+    "DATABASE_URL": "@database-url",
+    "JWT_SECRET": "@jwt-secret",
+    "PUSHER_APP_ID": "@pusher-app-id",
+    "NEXT_PUBLIC_PUSHER_KEY": "@pusher-key",
+    "PUSHER_SECRET": "@pusher-secret",
+    "NEXT_PUBLIC_PUSHER_CLUSTER": "@pusher-cluster",
+    "SEED_SECRET": "@seed-secret"
+  }
+}
