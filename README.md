@@ -1,6 +1,6 @@
 # ⚡ DoneFast Admin — Sistem Distribusi Order Otomatis Real-Time
 
-**DoneFast** adalah platform distribusi order joki (freelance task) otomatis yang bekerja layaknya aplikasi ojek online. Ketika ada order masuk, sistem secara otomatis mencari penjoki (pekerja) yang sedang online lalu mengirim notifikasi real-time. Penjoki dapat menerima atau menolak order dengan countdown timer — persis seperti driver app pada Gojek/Grab.
+**DoneFast** adalah platform distribusi order joki (freelance task) otomatis. Ketika ada order masuk, sistem secara otomatis mencari penjoki (pekerja) yang sedang online lalu mengirim notifikasi real-time. Penjoki dapat menerima atau menolak order dengan countdown timer — distribusi berjalan sepenuhnya otomatis.
 
 ---
 
@@ -14,7 +14,6 @@
 - [API Endpoints](#-api-endpoints)
 - [Setup & Instalasi](#-setup--instalasi)
 - [Deployment ke Vercel](#-deployment-ke-vercel)
-- [Akun Demo](#-akun-demo)
 - [Screenshot & Tampilan](#-screenshot--tampilan)
 - [Konfigurasi Lanjutan](#-konfigurasi-lanjutan)
 - [Lisensi](#-lisensi)
@@ -70,7 +69,7 @@ Inti dari DoneFast. Ketika admin membuat order baru:
 
 ### 3. Dashboard Penjoki (Mobile-First)
 
-Dashboard penjoki didesain seperti driver app ojek online:
+Dashboard penjoki didesain mobile-first:
 
 - **Toggle Online/Offline** — Satu tombol untuk mulai menerima order
 - **Order Offer Modal** — Pop-up real-time dengan detail order + countdown circle
@@ -78,6 +77,7 @@ Dashboard penjoki didesain seperti driver app ojek online:
 - **Stats Cards** — Saldo, rating, total order, order selesai
 - **Level Badge** — Penanda level penjoki
 - **Order Tabs** — Tab aktif, semua, dan riwayat order
+- **Profil** — Upload foto, edit spesialisasi (Pemrograman/Akademik/dll)
 - **Browser Notification** — Notifikasi di luar browser window
 - **Notification Sound** — Suara saat ada order masuk
 - **Bottom Navigation** — Navigasi mobile-friendly
@@ -98,7 +98,7 @@ Panel admin dengan sidebar navigation:
 - **Auto-Suspend** — Penjoki otomatis di-suspend selama 24 jam setelah 10x penolakan
 - **Sistem Komisi** — Komisi otomatis dihitung (default 80% dari harga order)
 - **Saldo & Earnings** — Saldo penjoki bertambah otomatis saat order selesai
-- **Rating System** — Rating penjoki (default 5.0, bisa di-manage via admin)
+- **Rating System** — Rating otomatis berdasarkan jumlah order selesai dan ketepatan waktu, admin juga bisa override manual
 - **Level System** — Level penjoki (1-10) mempengaruhi prioritas distribusi
 - **Activity Log** — Semua aksi tercatat: order dibuat, diterima, ditolak, selesai
 - **Countdown Timer** — Visual countdown circle + progress bar saat offer
@@ -535,8 +535,9 @@ npm run db:seed
 ```
 
 Ini akan membuat:
-- 1 akun **Admin**
-- 5 akun **Penjoki** (Ahmad, Budi, Citra, Dian, Eka)
+- 1 akun **Super Admin**
+- 1 akun **Admin Pemantau**
+- 5 akun **Penjoki**
 - System config default (response timeout, max attempts, dll)
 
 ---
@@ -590,43 +591,18 @@ curl -X POST "https://your-app.vercel.app/api/seed?secret=donefast-seed-2025"
 
 ---
 
-## 🔐 Akun Demo
-
-Setelah seed, akun berikut tersedia:
-
-| Role | Nama | Email | Password |
-|------|------|-------|----------|
-| Admin | Admin DoneFast | `admin@donefast.id` | `admin123` |
-| Penjoki | Ahmad Rizki | `ahmad@donefast.id` | `penjoki123` |
-| Penjoki | Budi Santoso | `budi@donefast.id` | `penjoki123` |
-| Penjoki | Citra Dewi | `citra@donefast.id` | `penjoki123` |
-| Penjoki | Dian Pratama | `dian@donefast.id` | `penjoki123` |
-| Penjoki | Eka Putra | `eka@donefast.id` | `penjoki123` |
-
-### Cara Test Lengkap
-
-1. Buka 2 browser window (atau 1 normal + 1 incognito)
-2. **Window 1**: Login sebagai admin (`admin@donefast.id`)
-3. **Window 2**: Login sebagai penjoki (`ahmad@donefast.id`)
-4. Di dashboard penjoki, klik tombol **Go Online**
-5. Di dashboard admin, buat order baru (klik + di section Orders)
-6. Di dashboard penjoki, order offer akan muncul otomatis dengan countdown
-7. Klik **Terima** atau **Tolak** dan lihat hasilnya
-
----
-
-## 🖼️ Screenshot & Tampilan
+## ️ Screenshot & Tampilan
 
 ### Halaman Login
 - Dark theme gradient (biru-abu)
 - Form login/register toggle
-- Tampilan demo credentials
 
 ### Dashboard Penjoki (Mobile)
 - Header dengan status online/offline dan tombol toggle
 - Stats cards: Saldo, Rating, Total Order, Selesai
 - Level badge
-- Tabs: Dashboard / Orders / History
+- Tabs: Dashboard / Orders / History / Profil
+- Tab Profil: Upload foto, edit spesialisasi
 - Modal order offer dengan countdown circle
 - Bottom navigation bar
 
@@ -709,4 +685,6 @@ MIT License — Bebas digunakan untuk keperluan apapun.
 
 ---
 
-**Dibuat dengan ❤️ untuk ekosistem freelancer Indonesia**
+**Dikerjakan sepenuhnya oleh MUH. ULIL AMRI, S.Kom**
+
+Kami terbuka untuk setiap masukan dan juga kritik. Jangan ragu untuk menghubungi kami atau membuka issue di repository ini.

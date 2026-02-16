@@ -88,6 +88,47 @@ export async function PATCH(
       return NextResponse.json({ success: true, penjoki });
     }
 
+    // Handle avatar update (penjoki can update their own, admin can update any)
+    if (updateData.avatar !== undefined) {
+      // Validate base64 image (max ~2MB)
+      if (typeof updateData.avatar === 'string' && updateData.avatar.length > 2 * 1024 * 1024) {
+        return NextResponse.json({ error: 'Ukuran foto maksimal 2MB' }, { status: 400 });
+      }
+      const penjoki = await prisma.penjoki.update({
+        where: { id },
+        data: { avatar: updateData.avatar || null },
+      });
+      return NextResponse.json({ success: true, penjoki });
+    }
+
+    // Handle specialization update (penjoki can update their own, admin can update any)
+    if (updateData.specialization !== undefined) {
+      if (!Array.isArray(updateData.specialization)) {
+        return NextResponse.json({ error: 'Specialization harus berupa array' }, { status: 400 });
+      }
+      const penjoki = await prisma.penjoki.update({
+        where: { id },
+        data: { specialization: updateData.specialization },
+      });
+      return NextResponse.json({ success: true, penjoki });
+    }
+
+    // Handle rating update (admin only)
+    if (updateData.rating !== undefined) {
+      if (user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Hanya admin yang bisa memberi rating' }, { status: 403 });
+      }
+      const rating = Number(updateData.rating);
+      if (isNaN(rating) || rating < 0 || rating > 5) {
+        return NextResponse.json({ error: 'Rating harus antara 0-5' }, { status: 400 });
+      }
+      const penjoki = await prisma.penjoki.update({
+        where: { id },
+        data: { rating },
+      });
+      return NextResponse.json({ success: true, penjoki });
+    }
+
     // Generic update
     const penjoki = await prisma.penjoki.update({
       where: { id },

@@ -496,6 +496,51 @@ export function generateOrderNumber(): string {
 }
 
 /**
+ * Calculate penjoki rating based on completed orders and timeliness
+ * Formula:
+ * - completionRate (0-1): completedOrder / totalOrder
+ * - onTimeRate (0-1): orders completed before deadline / total completed orders
+ * - Rating = (completionRate * 3 + onTimeRate * 2) → scale 0-5
+ * - Minimum 5 orders to get full weight, otherwise scaled proportionally
+ */
+async function calculateRating(penjokiId: string): Promise<number> {
+  const penjoki = await prisma.penjoki.findUnique({
+    where: { id: penjokiId },
+    include: {
+      orders: {
+        where: { status: OrderStatus.COMPLETED },
+        select: { completedAt: true, deadline: true, assignedAt: true },
+      },
+    },
+  });
+
+  if (!penjoki || penjoki.totalOrder === 0) return 0;
+
+  // Completion rate: completed / total
+  const completionRate = penjoki.completedOrder / penjoki.totalOrder;
+
+  // On-time rate: completed before deadline / total completed with deadline
+  const ordersWithDeadline = penjoki.orders.filter(o => o.deadline && o.completedAt);
+  let onTimeRate = 1; // Default perfect if no deadlines
+  if (ordersWithDeadline.length > 0) {
+    const onTimeCount = ordersWithDeadline.filter(o => {
+      return o.completedAt! <= o.deadline!;
+    }).length;
+    onTimeRate = onTimeCount / ordersWithDeadline.length;
+  }
+
+  // Experience factor: ramp up from 0 to 1 over first 5 orders
+  const experienceFactor = Math.min(penjoki.completedOrder / 5, 1);
+
+  // Final rating: weighted average scaled to 0-5
+  // 60% completion rate + 40% on-time rate, multiplied by experience factor
+  const rawRating = (completionRate * 0.6 + onTimeRate * 0.4) * 5 * experienceFactor;
+
+  // Round to 1 decimal
+  return Math.round(rawRating * 10) / 10;
+}
+
+/**
  * Complete an order
  */
 export async function completeOrder(orderId: string, penjokiId: string): Promise<DistributionResult> {
@@ -521,6 +566,7 @@ export async function completeOrder(orderId: string, penjokiId: string): Promise
   });
 
   // Update penjoki stats
+  const newRating = await calculateRating(penjokiId);
   await prisma.penjoki.update({
     where: { id: penjokiId },
     data: {
@@ -528,6 +574,7 @@ export async function completeOrder(orderId: string, penjokiId: string): Promise
       completedOrder: { increment: 1 },
       balance: { increment: order.commission },
       totalEarnings: { increment: order.commission },
+      rating: newRating,
     },
   });
 

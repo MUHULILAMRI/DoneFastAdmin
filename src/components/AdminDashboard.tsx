@@ -58,6 +58,7 @@ interface Penjoki {
   completedOrder: number;
   rejectedOrder: number;
   level: number;
+  specialization: string[];
   isActive: boolean;
   isSuspended: boolean;
   lastOnline: string | null;
@@ -81,6 +82,8 @@ export default function AdminDashboard() {
   const [orderFilter, setOrderFilter] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const [ratingPenjokiId, setRatingPenjokiId] = useState<string | null>(null);
+  const [hoverRating, setHoverRating] = useState(0);
 
   // New order form
   const [newOrder, setNewOrder] = useState({
@@ -206,6 +209,22 @@ export default function AdminDashboard() {
       });
       if (res.ok) {
         showNotif('Order berhasil di-assign manual');
+        fetchAll();
+      }
+    } catch {}
+  };
+
+  const handleRatePenjoki = async (penjokiId: string, rating: number) => {
+    try {
+      const res = await authFetch(`/api/penjoki/${penjokiId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating }),
+      });
+      if (res.ok) {
+        showNotif(`Rating penjoki diperbarui menjadi ${rating.toFixed(1)}`);
+        setRatingPenjokiId(null);
+        setHoverRating(0);
         fetchAll();
       }
     } catch {}
@@ -775,7 +794,11 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="text-center p-2 bg-gray-700/30 rounded-lg">
+                      <div
+                        className="text-center p-2 bg-gray-700/30 rounded-lg cursor-pointer hover:bg-gray-600/40 transition"
+                        onClick={() => { setRatingPenjokiId(ratingPenjokiId === p.id ? null : p.id); setHoverRating(0); }}
+                        title="Klik untuk beri rating"
+                      >
                         <p className="text-xs text-gray-500">Rating</p>
                         <p className="text-sm font-semibold text-yellow-400 flex items-center justify-center gap-0.5">
                           <Star className="w-3 h-3" />{p.rating.toFixed(1)}
@@ -791,10 +814,56 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
+                    {/* Rating Panel */}
+                    {ratingPenjokiId === p.id && (
+                      <div className="mb-3 p-3 bg-gray-700/40 rounded-xl border border-gray-600/30">
+                        <p className="text-xs text-gray-400 mb-2 text-center">Beri Rating untuk {p.name}</p>
+                        <div className="flex items-center justify-center gap-1 mb-2">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onMouseEnter={() => setHoverRating(star)}
+                              onMouseLeave={() => setHoverRating(0)}
+                              onClick={() => handleRatePenjoki(p.id, star)}
+                              className="p-0.5 transition-transform hover:scale-125"
+                            >
+                              <Star
+                                className={`w-6 h-6 transition-colors ${
+                                  (hoverRating || p.rating) >= star
+                                    ? 'text-yellow-400 fill-yellow-400'
+                                    : 'text-gray-600'
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-center text-xs text-gray-500">
+                          {hoverRating > 0 ? `${hoverRating}.0` : p.rating.toFixed(1)}
+                        </p>
+                        <button
+                          onClick={() => { setRatingPenjokiId(null); setHoverRating(0); }}
+                          className="w-full mt-2 py-1 text-xs text-gray-400 hover:text-white transition"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
                       <span>Earnings: {formatPrice(p.totalEarnings)}</span>
                       <span>Saldo: {formatPrice(p.balance)}</span>
                     </div>
+
+                    {/* Specializations */}
+                    {p.specialization && p.specialization.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {p.specialization.map((s, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-purple-900/20 text-purple-400 border border-purple-700/20 rounded-full text-xs">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    )}
 
                     <div className="flex gap-2">
                       {!p.isSuspended ? (

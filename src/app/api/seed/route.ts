@@ -13,59 +13,93 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Create admin user
-    const adminPassword = await hashPassword('admin123');
-    const admin = await prisma.user.upsert({
-      where: { email: 'admin@donefast.id' },
+    // Delete old demo users that are no longer needed
+    const oldDemoEmails = [
+      'admin@donefast.id',
+      'ahmad@donefast.id',
+      'budi@donefast.id',
+      'citra@donefast.id',
+      'dian@donefast.id',
+      'eka@donefast.id',
+    ];
+    // Delete penjoki records first (foreign key)
+    await prisma.penjoki.deleteMany({
+      where: { email: { in: oldDemoEmails } },
+    });
+    // Then delete user records
+    await prisma.user.deleteMany({
+      where: { email: { in: oldDemoEmails } },
+    });
+
+    // Create Super Admin user
+    const superAdminPassword = await hashPassword('@Bulusimba28');
+    const superAdmin = await prisma.user.upsert({
+      where: { email: 'muhulila0@gmail.com' },
       update: {},
       create: {
-        name: 'Admin DoneFast',
-        email: 'admin@donefast.id',
-        password: adminPassword,
+        name: 'Super Admin',
+        email: 'muhulila0@gmail.com',
+        password: superAdminPassword,
         role: 'ADMIN',
       },
     });
 
-    // Create sample penjoki users
+    // Create Admin 2 (Pemantau Orderan)
+    const admin2Password = await hashPassword('sari10');
+    const admin2 = await prisma.user.upsert({
+      where: { email: 'sari10@donefast.id' },
+      update: {},
+      create: {
+        name: 'Sari10',
+        email: 'sari10@donefast.id',
+        password: admin2Password,
+        role: 'ADMIN',
+      },
+    });
+
+    // Create penjoki users
     const penjokiData = [
-      { name: 'Ahmad Rizki', email: 'ahmad@donefast.id', phone: '081234567001', specialization: ['Skripsi', 'Makalah'] },
-      { name: 'Budi Santoso', email: 'budi@donefast.id', phone: '081234567002', specialization: ['Programming', 'Web Development'] },
-      { name: 'Citra Dewi', email: 'citra@donefast.id', phone: '081234567003', specialization: ['Desain', 'PPT'] },
-      { name: 'Dian Pratama', email: 'dian@donefast.id', phone: '081234567004', specialization: ['Skripsi', 'Jurnal'] },
-      { name: 'Eka Putra', email: 'eka@donefast.id', phone: '081234567005', specialization: ['Programming', 'Mobile App'] },
+      { name: 'Syahril Akbar', email: 'syahrilakbar12@donefast.id', password: '@SyahrilAkbar12', phone: '081234567001', specialization: ['Skripsi', 'Makalah'] },
+      { name: 'Apu', email: 'apu@donefast.id', password: '@Apu', phone: '081234567002', specialization: ['Programming', 'Web Development'] },
+      { name: 'Ulil28', email: 'ulil28@donefast.id', password: 'Ulil28', phone: '081234567003', specialization: ['Desain', 'PPT'] },
+      { name: 'Sarii10', email: 'sarii10@donefast.id', password: 'Sarii10', phone: '081234567004', specialization: ['Skripsi', 'Jurnal'] },
+      { name: 'Risal88', email: 'risal88@donefast.id', password: 'Risal88', phone: '081234567005', specialization: ['Programming', 'Mobile App'] },
     ];
 
-    const penjokiPassword = await hashPassword('penjoki123');
     const createdPenjoki = [];
 
     for (const p of penjokiData) {
+      const hashedPw = await hashPassword(p.password);
       const user = await prisma.user.upsert({
         where: { email: p.email },
         update: {},
         create: {
           name: p.name,
           email: p.email,
-          password: penjokiPassword,
+          password: hashedPw,
           role: 'PENJOKI',
         },
       });
 
       const penjoki = await prisma.penjoki.upsert({
         where: { email: p.email },
-        update: {},
+        update: { rating: 0 },
         create: {
           userId: user.id,
           name: p.name,
           email: p.email,
           phone: p.phone,
           specialization: p.specialization,
-          rating: 4.0 + Math.random(),
+          rating: 0,
           status: 'OFFLINE',
         },
       });
 
       createdPenjoki.push(penjoki);
     }
+
+    // Reset ALL penjoki ratings to 0 (only admin can rate)
+    await prisma.penjoki.updateMany({ data: { rating: 0 } });
 
     // Create system configs
     const configs = [
@@ -88,11 +122,11 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Database seeded successfully',
       data: {
-        admin: { email: admin.email, password: 'admin123' },
+        superAdmin: { email: superAdmin.email, name: superAdmin.name },
+        admin2: { email: admin2.email, name: admin2.name },
         penjoki: createdPenjoki.map(p => ({
           name: p.name,
           email: p.email,
-          password: 'penjoki123',
         })),
       },
     });

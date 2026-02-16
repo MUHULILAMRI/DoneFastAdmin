@@ -145,17 +145,15 @@ export default function LoginPage() {
 
         {/* Demo credentials */}
         <div className="mt-4 bg-gray-800/30 rounded-xl p-4 border border-gray-700/30">
-          <p className="text-gray-400 text-xs text-center mb-2">Demo Login:</p>
+          <p className="text-gray-400 text-xs text-center mb-2">Login:</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="text-center">
-              <p className="text-gray-500">Admin</p>
-              <p className="text-gray-300">admin@donefast.id</p>
-              <p className="text-gray-400">admin123</p>
+              <p className="text-gray-500">Super Admin</p>
+              <p className="text-gray-300">muhulila0@gmail.com</p>
             </div>
             <div className="text-center">
-              <p className="text-gray-500">Penjoki</p>
-              <p className="text-gray-300">ahmad@donefast.id</p>
-              <p className="text-gray-400">penjoki123</p>
+              <p className="text-gray-500">Pemantau</p>
+              <p className="text-gray-300">sari10@donefast.id</p>
             </div>
           </div>
         </div>

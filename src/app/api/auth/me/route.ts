@@ -32,6 +32,9 @@ export async function GET(request: NextRequest) {
         completedOrder: dbUser.penjoki.completedOrder,
         balance: dbUser.penjoki.balance,
         level: dbUser.penjoki.level,
+        avatar: dbUser.penjoki.avatar,
+        specialization: dbUser.penjoki.specialization,
+        phone: dbUser.penjoki.phone,
       } : null,
     });
   } catch (error) {

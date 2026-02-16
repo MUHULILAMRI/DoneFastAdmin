@@ -12,7 +12,7 @@ export default function CustomerPage() {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push('/');
+        router.push('/customer/login');
       } else if (user.role !== 'CUSTOMER') {
         router.push('/');
       }

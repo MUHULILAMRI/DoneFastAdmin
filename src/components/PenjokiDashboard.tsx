@@ -8,7 +8,7 @@ import { authFetch } from '@/lib/fetch';
 import {
   Power, PowerOff, Bell, CheckCircle, XCircle, Clock, Star,
   Wallet, TrendingUp, History, AlertTriangle, Zap, ChevronRight,
-  LogOut, Timer, DollarSign, FileText, User, Volume2
+  LogOut, Timer, DollarSign, FileText, User, Volume2, Camera, Tag, Save, X, Edit3
 } from 'lucide-react';
 
 interface OrderOffer {
@@ -53,7 +53,7 @@ export default function PenjokiDashboard() {
   const [countdown, setCountdown] = useState(0);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'history'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'history' | 'profile'>('dashboard');
   const [stats, setStats] = useState({
     totalOrder: 0,
     completedOrder: 0,
@@ -62,6 +62,11 @@ export default function PenjokiDashboard() {
     level: 1,
   });
   const [notification, setNotification] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [editingSpec, setEditingSpec] = useState(false);
+  const [specInput, setSpecInput] = useState('');
+  const [specializations, setSpecializations] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -76,6 +81,8 @@ export default function PenjokiDashboard() {
         balance: user.penjoki.balance,
         level: user.penjoki.level,
       });
+      if (user.penjoki.avatar) setAvatarPreview(user.penjoki.avatar);
+      if (user.penjoki.specialization) setSpecializations(user.penjoki.specialization);
     }
     fetchOrders();
   }, [user]);
@@ -317,6 +324,67 @@ export default function PenjokiDashboard() {
     router.push('/');
   };
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !penjokiId) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showNotification('Ukuran foto maksimal 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      setAvatarPreview(base64);
+      try {
+        const res = await authFetch(`/api/penjoki/${penjokiId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar: base64 }),
+        });
+        if (res.ok) {
+          showNotification('Foto profil berhasil diperbarui');
+          refreshUser();
+        }
+      } catch {}
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddSpecialization = async () => {
+    if (!specInput.trim() || !penjokiId) return;
+    const newSpecs = [...specializations, specInput.trim()];
+    setSpecializations(newSpecs);
+    setSpecInput('');
+    try {
+      const res = await authFetch(`/api/penjoki/${penjokiId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specialization: newSpecs }),
+      });
+      if (res.ok) {
+        showNotification('Spesialisasi ditambahkan');
+        refreshUser();
+      }
+    } catch {}
+  };
+
+  const handleRemoveSpecialization = async (index: number) => {
+    if (!penjokiId) return;
+    const newSpecs = specializations.filter((_, i) => i !== index);
+    setSpecializations(newSpecs);
+    try {
+      await authFetch(`/api/penjoki/${penjokiId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specialization: newSpecs }),
+      });
+      showNotification('Spesialisasi dihapus');
+      refreshUser();
+    } catch {}
+  };
+
   // Request notification permission
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
@@ -537,6 +605,7 @@ export default function PenjokiDashboard() {
             { id: 'dashboard' as const, label: 'Aktif', icon: Zap },
             { id: 'orders' as const, label: 'Order', icon: FileText },
             { id: 'history' as const, label: 'Riwayat', icon: History },
+            { id: 'profile' as const, label: 'Profil', icon: User },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -681,6 +750,162 @@ export default function PenjokiDashboard() {
             )}
           </div>
         )}
+
+        {/* Profile Tab */}
+        {activeTab === 'profile' && (
+          <div className="px-4 space-y-4">
+            {/* Avatar Section */}
+            <div className="bg-gray-800/50 border border-gray-700/30 rounded-2xl p-6 text-center">
+              <div className="relative inline-block">
+                <div className="w-24 h-24 rounded-full bg-gray-700 mx-auto overflow-hidden border-2 border-gray-600">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <User className="w-10 h-10 text-gray-500" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center border-2 border-gray-800 hover:bg-blue-500 transition"
+                >
+                  <Camera className="w-4 h-4 text-white" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </div>
+              <h2 className="text-white font-semibold text-lg mt-3">{user?.name}</h2>
+              <p className="text-gray-500 text-sm">{user?.email}</p>
+              {user?.penjoki?.phone && (
+                <p className="text-gray-500 text-sm">{user.penjoki.phone}</p>
+              )}
+            </div>
+
+            {/* Stats Summary */}
+            <div className="bg-gray-800/50 border border-gray-700/30 rounded-2xl p-5">
+              <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-400" />
+                Statistik
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-700/30 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Rating</p>
+                  <p className="text-lg font-bold text-yellow-400 flex items-center justify-center gap-1">
+                    <Star className="w-4 h-4" />{stats.rating.toFixed(1)}
+                  </p>
+                </div>
+                <div className="bg-gray-700/30 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Level</p>
+                  <p className="text-lg font-bold text-blue-400">{stats.level}</p>
+                </div>
+                <div className="bg-gray-700/30 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Total Order</p>
+                  <p className="text-lg font-bold text-white">{stats.totalOrder}</p>
+                </div>
+                <div className="bg-gray-700/30 rounded-xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Selesai</p>
+                  <p className="text-lg font-bold text-green-400">{stats.completedOrder}</p>
+                </div>
+              </div>
+              <div className="mt-3 bg-gray-700/30 rounded-xl p-3">
+                <p className="text-xs text-gray-500 mb-1">Rating dihitung otomatis berdasarkan:</p>
+                <ul className="text-xs text-gray-400 space-y-0.5">
+                  <li>• Jumlah order yang diselesaikan</li>
+                  <li>• Ketepatan waktu pengerjaan (sebelum deadline)</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Specialization Section */}
+            <div className="bg-gray-800/50 border border-gray-700/30 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-purple-400" />
+                  Spesialisasi
+                </h3>
+                <button
+                  onClick={() => setEditingSpec(!editingSpec)}
+                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 transition"
+                >
+                  <Edit3 className="w-3 h-3" />
+                  {editingSpec ? 'Selesai' : 'Edit'}
+                </button>
+              </div>
+
+              {/* Current specializations */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {specializations.length === 0 ? (
+                  <p className="text-gray-500 text-sm">Belum ada spesialisasi</p>
+                ) : (
+                  specializations.map((spec, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-900/30 text-purple-300 border border-purple-700/30 rounded-full text-sm">
+                      {spec}
+                      {editingSpec && (
+                        <button
+                          onClick={() => handleRemoveSpecialization(i)}
+                          className="ml-1 hover:text-red-400 transition"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </span>
+                  ))
+                )}
+              </div>
+
+              {/* Add specialization */}
+              {editingSpec && (
+                <div className="space-y-2">
+                  {/* Quick pick */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Pemrograman', 'Akademik', 'Skripsi', 'Makalah', 'Web Development', 'Mobile App', 'Desain', 'PPT', 'Jurnal', 'Data Analysis'].filter(s => !specializations.includes(s)).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => {
+                          const newSpecs = [...specializations, s];
+                          setSpecializations(newSpecs);
+                          authFetch(`/api/penjoki/${penjokiId}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ specialization: newSpecs }),
+                          }).then(() => { showNotification(`Spesialisasi "${s}" ditambahkan`); refreshUser(); });
+                        }}
+                        className="px-2.5 py-1 bg-gray-700/50 text-gray-300 rounded-full text-xs hover:bg-purple-900/30 hover:text-purple-300 border border-gray-600/30 hover:border-purple-700/30 transition"
+                      >
+                        + {s}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={specInput}
+                      onChange={(e) => setSpecInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddSpecialization()}
+                      placeholder="Spesialisasi custom..."
+                      className="flex-1 px-3 py-2 bg-gray-700/50 border border-gray-600/30 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <button
+                      onClick={handleAddSpecialization}
+                      disabled={!specInput.trim()}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-xl transition disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Bottom Navigation */}
@@ -690,6 +915,7 @@ export default function PenjokiDashboard() {
             { id: 'dashboard' as const, label: 'Beranda', icon: Zap },
             { id: 'orders' as const, label: 'Order', icon: FileText },
             { id: 'history' as const, label: 'Riwayat', icon: History },
+            { id: 'profile' as const, label: 'Profil', icon: User },
           ].map((tab) => (
             <button
               key={tab.id}

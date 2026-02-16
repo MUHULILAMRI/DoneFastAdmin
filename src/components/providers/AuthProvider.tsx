@@ -16,6 +16,9 @@ interface User {
     completedOrder: number;
     balance: number;
     level: number;
+    avatar?: string | null;
+    specialization?: string[];
+    phone?: string | null;
   };
 }
 
