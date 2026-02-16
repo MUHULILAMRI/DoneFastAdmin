@@ -503,9 +503,7 @@ export default function PenjokiDashboard() {
       <header className="bg-gray-900/80 backdrop-blur-xl border-b border-gray-800 sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
+            <img src="/logo.png" alt="DoneFast" className="w-10 h-10 rounded-xl" />
             <div>
               <h1 className="font-bold text-white text-sm">DoneFast</h1>
               <div className="flex items-center gap-1.5">

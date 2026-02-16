@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "DoneFast - Sistem Distribusi Order Otomatis",
-  description: "Platform distribusi order joki otomatis real-time seperti ojek online",
+  description: "Platform distribusi order joki otomatis real-time — Joki Cepat Anti Repot",
 };
 
 export default function RootLayout({

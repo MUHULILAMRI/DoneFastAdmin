@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   LogIn,
   UserPlus,
-  Zap,
   ArrowLeft,
   CheckCircle2,
   Shield,
@@ -100,9 +99,7 @@ export default function CustomerLoginPage() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4 shadow-lg shadow-blue-500/25">
-              <Zap className="w-8 h-8 text-white" />
-            </div>
+            <img src="/logo.png" alt="DoneFast" className="w-20 h-20 rounded-2xl mb-4 mx-auto shadow-lg shadow-blue-500/25" />
             <h1 className="text-3xl font-bold text-white">DoneFast</h1>
             <p className="text-blue-300/80 mt-2">
               {isLogin ? 'Masuk untuk kelola ordermu' : 'Daftar dan mulai pesan jasa'}

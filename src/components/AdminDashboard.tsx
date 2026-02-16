@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { authFetch } from '@/lib/fetch';
 import {
   BarChart3, Users, ShoppingCart, TrendingUp, Eye, Send, RefreshCw,
-  CheckCircle, XCircle, Clock, AlertTriangle, Zap, LogOut, Plus,
+  CheckCircle, XCircle, Clock, AlertTriangle, LogOut, Plus,
   DollarSign, Activity, ArrowRight, Star, Ban, UserCheck, Search,
   Filter, MoreVertical, ChevronDown, Bell, Settings, Award
 } from 'lucide-react';
@@ -307,9 +307,7 @@ export default function AdminDashboard() {
       <aside className="fixed left-0 top-0 bottom-0 w-64 bg-gray-900 border-r border-gray-800 z-30 flex flex-col">
         <div className="p-5 border-b border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
+            <img src="/logo.png" alt="DoneFast" className="w-10 h-10 rounded-xl" />
             <div>
               <h1 className="font-bold text-white">DoneFast</h1>
               <p className="text-xs text-gray-500">Admin Panel</p>
