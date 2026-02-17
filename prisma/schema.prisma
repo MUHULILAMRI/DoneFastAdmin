@@ -118,6 +118,11 @@ model Order {
   assignedAt    DateTime?    @map("assigned_at")
   startedAt     DateTime?    @map("started_at")
   completedAt   DateTime?    @map("completed_at")
+  cancelledAt   DateTime?    @map("cancelled_at")
+  cancelReason  String?      @map("cancel_reason")
+  customerRating Int?        @map("customer_rating")
+  customerReview String?     @map("customer_review") @db.Text
+  ratedAt       DateTime?    @map("rated_at")
   notes         String?      @db.Text
   attachments   String[]     @default([])
   priority      Int          @default(0)
