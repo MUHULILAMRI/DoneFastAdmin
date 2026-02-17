@@ -163,18 +163,23 @@ export async function PATCH(request: NextRequest) {
         },
       });
 
-      // Notify via Pusher
-      await pusherServer.trigger(CHANNELS.ORDERS, EVENTS.ORDER_STATUS_CHANGED, {
-        orderId,
-        status: 'CANCELLED',
-        message: `Order ${updated.orderNumber} dibatalkan oleh customer`,
-      });
-
-      await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.ORDER_STATUS_CHANGED, {
-        orderId,
-        status: 'CANCELLED',
-        message: `Order ${updated.orderNumber} dibatalkan oleh customer`,
-      });
+      // Notify via Pusher (non-blocking)
+      try {
+        await Promise.all([
+          pusherServer.trigger(CHANNELS.ORDERS, EVENTS.ORDER_STATUS_CHANGED, {
+            orderId,
+            status: 'CANCELLED',
+            message: `Order ${updated.orderNumber} dibatalkan oleh customer`,
+          }),
+          pusherServer.trigger(CHANNELS.ADMIN, EVENTS.ORDER_STATUS_CHANGED, {
+            orderId,
+            status: 'CANCELLED',
+            message: `Order ${updated.orderNumber} dibatalkan oleh customer`,
+          }),
+        ]);
+      } catch (pusherError) {
+        console.error('Pusher broadcast error (non-fatal):', pusherError);
+      }
 
       return NextResponse.json({ success: true, order: updated });
     }

@@ -36,18 +36,23 @@ export async function PATCH(
         data: updatePayload,
       });
 
-      // Broadcast status change
-      await pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.PENJOKI_STATUS_CHANGED, {
-        penjokiId: id,
-        status: penjoki.status,
-        name: penjoki.name,
-      });
-
-      await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.PENJOKI_STATUS_CHANGED, {
-        penjokiId: id,
-        status: penjoki.status,
-        name: penjoki.name,
-      });
+      // Broadcast status change (non-blocking — don't fail the request if Pusher errors)
+      try {
+        await Promise.all([
+          pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.PENJOKI_STATUS_CHANGED, {
+            penjokiId: id,
+            status: penjoki.status,
+            name: penjoki.name,
+          }),
+          pusherServer.trigger(CHANNELS.ADMIN, EVENTS.PENJOKI_STATUS_CHANGED, {
+            penjokiId: id,
+            status: penjoki.status,
+            name: penjoki.name,
+          }),
+        ]);
+      } catch (pusherError) {
+        console.error('Pusher broadcast error (non-fatal):', pusherError);
+      }
 
       return NextResponse.json({ success: true, penjoki });
     }

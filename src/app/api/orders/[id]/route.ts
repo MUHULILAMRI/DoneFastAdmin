@@ -83,11 +83,15 @@ export async function PATCH(
         data: { status: 'PROCESSING', startedAt: new Date() },
       });
 
-      await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.ORDER_STATUS_CHANGED, {
-        orderId: id,
-        status: 'PROCESSING',
-        message: `Order ${order.orderNumber} mulai diproses`,
-      });
+      try {
+        await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.ORDER_STATUS_CHANGED, {
+          orderId: id,
+          status: 'PROCESSING',
+          message: `Order ${order.orderNumber} mulai diproses`,
+        });
+      } catch (pusherError) {
+        console.error('Pusher broadcast error (non-fatal):', pusherError);
+      }
 
       return NextResponse.json({ success: true, order });
     }
@@ -132,11 +136,15 @@ export async function PATCH(
         data: { status: 'BUSY', totalOrder: { increment: 1 } },
       });
 
-      await pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_ASSIGNED, {
-        orderId: id,
-        orderNumber: order.orderNumber,
-        penjokiId,
-      });
+      try {
+        await pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_ASSIGNED, {
+          orderId: id,
+          orderNumber: order.orderNumber,
+          penjokiId,
+        });
+      } catch (pusherError) {
+        console.error('Pusher broadcast error (non-fatal):', pusherError);
+      }
 
       return NextResponse.json({ success: true, order });
     }

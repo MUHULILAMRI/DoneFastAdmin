@@ -39,11 +39,15 @@ export async function startDistribution(orderId: string): Promise<DistributionRe
   });
 
   // Notify admin about distribution start
-  await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
-    orderId,
-    status: 'SEARCHING',
-    message: `Mencari penjoki untuk order ${order.orderNumber}...`,
-  });
+  try {
+    await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
+      orderId,
+      status: 'SEARCHING',
+      message: `Mencari penjoki untuk order ${order.orderNumber}...`,
+    });
+  } catch (pusherError) {
+    console.error('Pusher broadcast error (non-fatal):', pusherError);
+  }
 
   // Find next available penjoki
   return await distributeToNextPenjoki(orderId);
@@ -69,11 +73,15 @@ export async function distributeToNextPenjoki(orderId: string): Promise<Distribu
       data: { status: OrderStatus.WAITING },
     });
 
-    await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
-      orderId,
-      status: 'EXHAUSTED',
-      message: `Tidak ada penjoki tersedia untuk order ${order.orderNumber}. Perlu assign manual.`,
-    });
+    try {
+      await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
+        orderId,
+        status: 'EXHAUSTED',
+        message: `Tidak ada penjoki tersedia untuk order ${order.orderNumber}. Perlu assign manual.`,
+      });
+    } catch (pusherError) {
+      console.error('Pusher broadcast error (non-fatal):', pusherError);
+    }
 
     return { success: false, message: 'All distribution attempts exhausted' };
   }
@@ -94,11 +102,15 @@ export async function distributeToNextPenjoki(orderId: string): Promise<Distribu
       data: { status: OrderStatus.WAITING },
     });
 
-    await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
-      orderId,
-      status: 'NO_PENJOKI',
-      message: `Tidak ada penjoki online untuk order ${order.orderNumber}`,
-    });
+    try {
+      await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
+        orderId,
+        status: 'NO_PENJOKI',
+        message: `Tidak ada penjoki online untuk order ${order.orderNumber}`,
+      });
+    } catch (pusherError) {
+      console.error('Pusher broadcast error (non-fatal):', pusherError);
+    }
 
     return { success: false, message: 'No available penjoki found' };
   }
@@ -119,30 +131,35 @@ export async function distributeToNextPenjoki(orderId: string): Promise<Distribu
   });
 
   // Send real-time notification to penjoki
-  await pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_OFFER, {
-    distributionId: distribution.id,
-    orderId: order.id,
-    orderNumber: order.orderNumber,
-    penjokiId: nextPenjoki.id,
-    serviceType: order.serviceType,
-    description: order.description,
-    price: order.price,
-    commission: order.price * nextPenjoki.commissionRate,
-    deadline: order.deadline,
-    customerName: order.customerName,
-    responseTimeout: order.responseTimeout,
-    timestamp: new Date().toISOString(),
-  });
-
-  // Notify admin
-  await pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
-    orderId,
-    penjokiId: nextPenjoki.id,
-    penjokiName: nextPenjoki.name,
-    status: 'SENT',
-    distributionId: distribution.id,
-    message: `Order ${order.orderNumber} dikirim ke ${nextPenjoki.name}`,
-  });
+  try {
+    await Promise.all([
+      pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_OFFER, {
+        distributionId: distribution.id,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        penjokiId: nextPenjoki.id,
+        serviceType: order.serviceType,
+        description: order.description,
+        price: order.price,
+        commission: order.price * nextPenjoki.commissionRate,
+        deadline: order.deadline,
+        customerName: order.customerName,
+        responseTimeout: order.responseTimeout,
+        timestamp: new Date().toISOString(),
+      }),
+      // Notify admin
+      pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
+        orderId,
+        penjokiId: nextPenjoki.id,
+        penjokiName: nextPenjoki.name,
+        status: 'SENT',
+        distributionId: distribution.id,
+        message: `Order ${order.orderNumber} dikirim ke ${nextPenjoki.name}`,
+      }),
+    ]);
+  } catch (pusherError) {
+    console.error('Pusher broadcast error (non-fatal):', pusherError);
+  }
 
   // Schedule timeout check
   scheduleTimeout(distribution.id, orderId, nextPenjoki.id, order.responseTimeout);
@@ -285,22 +302,26 @@ export async function acceptOrder(
   });
 
   // Notify all parties
-  await Promise.all([
-    pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_ACCEPTED, {
-      orderId: distribution.orderId,
-      orderNumber: distribution.order.orderNumber,
-      penjokiId,
-      penjokiName: distribution.penjoki.name,
-      distributionId,
-    }),
-    pusherServer.trigger(CHANNELS.ADMIN, EVENTS.ORDER_ACCEPTED, {
-      orderId: distribution.orderId,
-      orderNumber: distribution.order.orderNumber,
-      penjokiId,
-      penjokiName: distribution.penjoki.name,
-      message: `Order ${distribution.order.orderNumber} diterima oleh ${distribution.penjoki.name}`,
-    }),
-  ]);
+  try {
+    await Promise.all([
+      pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_ACCEPTED, {
+        orderId: distribution.orderId,
+        orderNumber: distribution.order.orderNumber,
+        penjokiId,
+        penjokiName: distribution.penjoki.name,
+        distributionId,
+      }),
+      pusherServer.trigger(CHANNELS.ADMIN, EVENTS.ORDER_ACCEPTED, {
+        orderId: distribution.orderId,
+        orderNumber: distribution.order.orderNumber,
+        penjokiId,
+        penjokiName: distribution.penjoki.name,
+        message: `Order ${distribution.order.orderNumber} diterima oleh ${distribution.penjoki.name}`,
+      }),
+    ]);
+  } catch (pusherError) {
+    console.error('Pusher broadcast error (non-fatal):', pusherError);
+  }
 
   // Log activity
   await prisma.activityLog.create({
@@ -380,24 +401,28 @@ export async function rejectOrder(
   }
 
   // Notify
-  await Promise.all([
-    pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_REJECTED, {
-      orderId: distribution.orderId,
-      orderNumber: distribution.order.orderNumber,
-      penjokiId,
-      penjokiName: distribution.penjoki.name,
-      reason,
-      distributionId,
-    }),
-    pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
-      orderId: distribution.orderId,
-      penjokiId,
-      penjokiName: distribution.penjoki.name,
-      status: 'REJECTED',
-      reason,
-      message: `${distribution.penjoki.name} menolak order ${distribution.order.orderNumber}`,
-    }),
-  ]);
+  try {
+    await Promise.all([
+      pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_REJECTED, {
+        orderId: distribution.orderId,
+        orderNumber: distribution.order.orderNumber,
+        penjokiId,
+        penjokiName: distribution.penjoki.name,
+        reason,
+        distributionId,
+      }),
+      pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
+        orderId: distribution.orderId,
+        penjokiId,
+        penjokiName: distribution.penjoki.name,
+        status: 'REJECTED',
+        reason,
+        message: `${distribution.penjoki.name} menolak order ${distribution.order.orderNumber}`,
+      }),
+    ]);
+  } catch (pusherError) {
+    console.error('Pusher broadcast error (non-fatal):', pusherError);
+  }
 
   // Log activity
   await prisma.activityLog.create({
@@ -441,20 +466,24 @@ export async function handleTimeout(
   });
 
   // Notify
-  await Promise.all([
-    pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_TIMEOUT, {
-      orderId,
-      penjokiId,
-      distributionId,
-    }),
-    pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
-      orderId,
-      penjokiId,
-      penjokiName: distribution.penjoki.name,
-      status: 'TIMEOUT',
-      message: `${distribution.penjoki.name} tidak merespon order ${distribution.order.orderNumber}`,
-    }),
-  ]);
+  try {
+    await Promise.all([
+      pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_TIMEOUT, {
+        orderId,
+        penjokiId,
+        distributionId,
+      }),
+      pusherServer.trigger(CHANNELS.ADMIN, EVENTS.DISTRIBUTION_UPDATE, {
+        orderId,
+        penjokiId,
+        penjokiName: distribution.penjoki.name,
+        status: 'TIMEOUT',
+        message: `${distribution.penjoki.name} tidak merespon order ${distribution.order.orderNumber}`,
+      }),
+    ]);
+  } catch (pusherError) {
+    console.error('Pusher broadcast error (non-fatal):', pusherError);
+  }
 
   // Distribute to next penjoki
   return await distributeToNextPenjoki(orderId);
@@ -578,20 +607,24 @@ export async function completeOrder(orderId: string, penjokiId: string): Promise
     },
   });
 
-  await Promise.all([
-    pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_COMPLETED, {
-      orderId,
-      orderNumber: order.orderNumber,
-      penjokiId,
-    }),
-    pusherServer.trigger(CHANNELS.ADMIN, EVENTS.ORDER_COMPLETED, {
-      orderId,
-      orderNumber: order.orderNumber,
-      penjokiId,
-      penjokiName: order.penjoki?.name,
-      message: `Order ${order.orderNumber} telah selesai!`,
-    }),
-  ]);
+  try {
+    await Promise.all([
+      pusherServer.trigger(CHANNELS.DISTRIBUTION, EVENTS.ORDER_COMPLETED, {
+        orderId,
+        orderNumber: order.orderNumber,
+        penjokiId,
+      }),
+      pusherServer.trigger(CHANNELS.ADMIN, EVENTS.ORDER_COMPLETED, {
+        orderId,
+        orderNumber: order.orderNumber,
+        penjokiId,
+        penjokiName: order.penjoki?.name,
+        message: `Order ${order.orderNumber} telah selesai!`,
+      }),
+    ]);
+  } catch (pusherError) {
+    console.error('Pusher broadcast error (non-fatal):', pusherError);
+  }
 
   return { success: true, message: 'Order completed' };
 }

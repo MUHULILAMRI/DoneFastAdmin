@@ -9,7 +9,20 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
-  const pool = new pg.Pool({ connectionString });
+  // Parse the connection string and ensure SSL is configured properly
+  const poolConfig: pg.PoolConfig = {
+    connectionString,
+    max: 3,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 10000,
+  };
+
+  // For Supabase/production: use SSL but don't reject self-signed certs
+  if (process.env.NODE_ENV === 'production' || connectionString.includes('supabase')) {
+    poolConfig.ssl = { rejectUnauthorized: false };
+  }
+
+  const pool = new pg.Pool(poolConfig);
   const adapter = new PrismaPg(pool);
   return new PrismaClient({
     adapter,
